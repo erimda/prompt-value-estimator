@@ -114,6 +114,7 @@ module PromptValueEstimator
       uri
     end
 
+    # rubocop:disable Style/CaseLikeIf
     def handle_http_response(response)
       # Check response type using is_a? for better testability
       if response.is_a?(Net::HTTPSuccess)
@@ -132,6 +133,7 @@ module PromptValueEstimator
     rescue JSON::ParserError => e
       raise ProviderError, "Invalid JSON response: #{e.message}"
     end
+    # rubocop:enable Style/CaseLikeIf
 
     def parse_keyword_response(response, keyword)
       return {} unless response.is_a?(Hash)
