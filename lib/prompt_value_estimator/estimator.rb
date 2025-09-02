@@ -1,18 +1,32 @@
 # frozen_string_literal: true
 
+require 'digest'
+
 module PromptValueEstimator
   class Estimator < BaseService
-    attr_reader :normalizer, :serpstat_client
+    attr_reader :normalizer, :serpstat_client, :cache
 
     def initialize(configuration = nil, logger = nil)
       super
       @normalizer = Normalizer.new(configuration, logger)
       @serpstat_client = SerpstatClient.new(configuration, logger)
+      @cache = Cache.new(
+        ttl: configuration&.cache_ttl || 86_400,
+        max_size: 1000 # Default max size
+      )
     end
 
     def estimate_volume(prompt, region = nil)
       validate_presence(prompt, 'prompt')
       validate_type(prompt, String, 'prompt')
+
+      # Check cache first
+      cache_key = generate_cache_key('estimate_volume', prompt, region)
+      cached_result = cache.get(cache_key)
+      if cached_result
+        log_info('Returning cached result', { prompt: prompt, region: region })
+        return cached_result
+      end
 
       log_info('Starting volume estimation', { prompt: prompt, region: region })
 
@@ -59,6 +73,9 @@ module PromptValueEstimator
                  total_estimate: estimates[:total],
                  confidence: confidence
                })
+
+      # Cache the result
+      cache.set(cache_key, result)
 
       result
     end
@@ -108,6 +125,14 @@ module PromptValueEstimator
       validate_presence(prompt, 'prompt')
       validate_type(prompt, String, 'prompt')
 
+      # Check cache first
+      cache_key = generate_cache_key('get_related_prompts', prompt, region)
+      cached_result = cache.get(cache_key)
+      if cached_result
+        log_info('Returning cached related prompts', { prompt: prompt, region: region })
+        return cached_result
+      end
+
       region ||= configuration.provider_config('serpstat')['default_region'] || 'us'
       log_info('Fetching related prompts', { prompt: prompt, region: region })
 
@@ -117,7 +142,7 @@ module PromptValueEstimator
         # Sort by search volume (descending)
         sorted_keywords = related_keywords.sort_by { |k| -(k[:search_volume] || 0) }
 
-        {
+        result = {
           prompt: prompt,
           region: region,
           related_keywords: sorted_keywords,
@@ -128,6 +153,11 @@ module PromptValueEstimator
             timestamp: Time.now.iso8601
           }
         }
+
+        # Cache the result
+        cache.set(cache_key, result)
+
+        result
       rescue StandardError => e
         log_error('Failed to fetch related prompts', {
                     prompt: prompt,
@@ -154,6 +184,14 @@ module PromptValueEstimator
       validate_presence(prompt, 'prompt')
       validate_type(prompt, String, 'prompt')
 
+      # Check cache first
+      cache_key = generate_cache_key('get_keyword_suggestions', prompt, region)
+      cached_result = cache.get(cache_key)
+      if cached_result
+        log_info('Returning cached keyword suggestions', { prompt: prompt, region: region })
+        return cached_result
+      end
+
       region ||= configuration.provider_config('serpstat')['default_region'] || 'us'
       log_info('Fetching keyword suggestions', { prompt: prompt, region: region })
 
@@ -163,7 +201,7 @@ module PromptValueEstimator
         # Sort by search volume (descending)
         sorted_suggestions = suggestions.sort_by { |s| -(s[:search_volume] || 0) }
 
-        {
+        result = {
           prompt: prompt,
           region: region,
           suggestions: sorted_suggestions,
@@ -174,6 +212,11 @@ module PromptValueEstimator
             timestamp: Time.now.iso8601
           }
         }
+
+        # Cache the result
+        cache.set(cache_key, result)
+
+        result
       rescue StandardError => e
         log_error('Failed to fetch keyword suggestions', {
                     prompt: prompt,
@@ -197,6 +240,10 @@ module PromptValueEstimator
     end
 
     private
+
+    def generate_cache_key(method, prompt, region)
+      "estimator:#{method}:#{Digest::MD5.hexdigest(prompt.downcase.strip)}:#{region || 'us'}"
+    end
 
     def fetch_volume_data(variants, region)
       volume_data = []

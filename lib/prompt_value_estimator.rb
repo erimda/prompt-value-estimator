@@ -9,6 +9,7 @@ require_relative 'prompt_value_estimator/normalizer'
 require_relative 'prompt_value_estimator/serpstat_client'
 require_relative 'prompt_value_estimator/estimator'
 require_relative 'prompt_value_estimator/cli'
+require_relative 'prompt_value_estimator/cache'
 
 module PromptValueEstimator
   class Error < StandardError; end
