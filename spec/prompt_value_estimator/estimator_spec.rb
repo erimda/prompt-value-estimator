@@ -448,4 +448,73 @@ RSpec.describe PromptValueEstimator::Estimator do
       expect(log_output).to include('Volume estimation completed')
     end
   end
+
+  describe 'related prompts functionality' do
+    let(:related_keywords) do
+      [
+        { keyword: 'related1', search_volume: 500, cpc: 1.50, competition: 0.60,
+          source: 'serpstat' },
+        { keyword: 'related2', search_volume: 300, cpc: 0.80, competition: 0.40,
+          source: 'serpstat' }
+      ]
+    end
+
+    let(:suggestions) do
+      [
+        { keyword: 'suggestion1', search_volume: 800, cpc: 2.00, competition: 0.70,
+          source: 'serpstat' },
+        { keyword: 'suggestion2', search_volume: 600, cpc: 1.20, competition: 0.50,
+          source: 'serpstat' }
+      ]
+    end
+
+    before do
+      allow(estimator.serpstat_client).to receive_messages(get_related_keywords: related_keywords,
+                                                           get_keyword_suggestions: suggestions)
+    end
+
+    it 'fetches related keywords for a prompt' do
+      result = estimator.get_related_prompts('test prompt', 'us')
+
+      expect(result[:related_keywords]).to eq(related_keywords)
+      expect(result[:source]).to eq('serpstat')
+      expect(result[:region]).to eq('us')
+    end
+
+    it 'fetches keyword suggestions for a prompt' do
+      result = estimator.get_keyword_suggestions('test prompt', 'us')
+
+      expect(result[:suggestions]).to eq(suggestions)
+      expect(result[:source]).to eq('serpstat')
+      expect(result[:region]).to eq('us')
+    end
+
+    it 'uses default region when none specified' do
+      result = estimator.get_related_prompts('test prompt')
+
+      expect(result[:region]).to eq('us')
+    end
+
+    it 'handles API errors gracefully' do
+      allow(estimator.serpstat_client).to receive(:get_related_keywords).and_raise(StandardError,
+                                                                                   'API error')
+
+      result = estimator.get_related_prompts('test prompt')
+
+      expect(result[:error]).to eq('API error')
+      expect(result[:related_keywords]).to eq([])
+    end
+
+    it 'ranks related prompts by search volume' do
+      result = estimator.get_related_prompts('test prompt')
+
+      expect(result[:related_keywords].first[:search_volume]).to be >= result[:related_keywords].last[:search_volume]
+    end
+
+    it 'ranks suggestions by search volume' do
+      result = estimator.get_keyword_suggestions('test prompt')
+
+      expect(result[:suggestions].first[:search_volume]).to be >= result[:suggestions].last[:search_volume]
+    end
+  end
 end

@@ -104,6 +104,98 @@ module PromptValueEstimator
       results
     end
 
+    def get_related_prompts(prompt, region = nil)
+      validate_presence(prompt, 'prompt')
+      validate_type(prompt, String, 'prompt')
+
+      region ||= configuration.provider_config('serpstat')['default_region'] || 'us'
+      log_info('Fetching related prompts', { prompt: prompt, region: region })
+
+      begin
+        related_keywords = serpstat_client.get_related_keywords(prompt, region)
+
+        # Sort by search volume (descending)
+        sorted_keywords = related_keywords.sort_by { |k| -(k[:search_volume] || 0) }
+
+        {
+          prompt: prompt,
+          region: region,
+          related_keywords: sorted_keywords,
+          source: 'serpstat',
+          metadata: {
+            total_related: sorted_keywords.length,
+            source: 'serpstat',
+            timestamp: Time.now.iso8601
+          }
+        }
+      rescue StandardError => e
+        log_error('Failed to fetch related prompts', {
+                    prompt: prompt,
+                    region: region,
+                    error: e.message
+                  })
+
+        {
+          prompt: prompt,
+          region: region,
+          related_keywords: [],
+          error: e.message,
+          source: 'serpstat',
+          metadata: {
+            total_related: 0,
+            source: 'serpstat',
+            timestamp: Time.now.iso8601
+          }
+        }
+      end
+    end
+
+    def get_keyword_suggestions(prompt, region = nil)
+      validate_presence(prompt, 'prompt')
+      validate_type(prompt, String, 'prompt')
+
+      region ||= configuration.provider_config('serpstat')['default_region'] || 'us'
+      log_info('Fetching keyword suggestions', { prompt: prompt, region: region })
+
+      begin
+        suggestions = serpstat_client.get_keyword_suggestions(prompt, region)
+
+        # Sort by search volume (descending)
+        sorted_suggestions = suggestions.sort_by { |s| -(s[:search_volume] || 0) }
+
+        {
+          prompt: prompt,
+          region: region,
+          suggestions: sorted_suggestions,
+          source: 'serpstat',
+          metadata: {
+            total_suggestions: sorted_suggestions.length,
+            source: 'serpstat',
+            timestamp: Time.now.iso8601
+          }
+        }
+      rescue StandardError => e
+        log_error('Failed to fetch keyword suggestions', {
+                    prompt: prompt,
+                    region: region,
+                    error: e.message
+                  })
+
+        {
+          prompt: prompt,
+          region: region,
+          suggestions: [],
+          error: e.message,
+          source: 'serpstat',
+          metadata: {
+            total_suggestions: 0,
+            source: 'serpstat',
+            timestamp: Time.now.iso8601
+          }
+        }
+      end
+    end
+
     private
 
     def fetch_volume_data(variants, region)
