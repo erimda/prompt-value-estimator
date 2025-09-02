@@ -7,7 +7,7 @@ RSpec.describe PromptValueEstimator::Estimator do
 
   describe '#initialize' do
     it 'creates a new estimator instance' do
-      expect(estimator).to be_a(PromptValueEstimator::Estimator)
+      expect(estimator).to be_a(described_class)
     end
   end
 

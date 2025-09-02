@@ -1,0 +1,69 @@
+# .rubocop.yml
+
+inherit_mode:
+  merge:
+    - Exclude
+
+plugins:
+  - rubocop-rspec
+  - rubocop-performance
+
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 3.3
+  Exclude:
+    - "bin/**/*"
+    - "db/schema.rb"
+    - "node_modules/**/*"
+    - "vendor/**/*"
+
+# Formatting & Style
+Layout/LineLength:
+  Max: 100
+
+Layout/TrailingWhitespace:
+  Enabled: true
+
+Layout/EmptyLines:
+  Enabled: true
+
+Style/FrozenStringLiteralComment:
+  Enabled: true
+
+Style/Documentation:
+  Enabled: false # Don’t force class/module doc comments
+
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+
+Metrics/MethodLength:
+  Max: 20
+
+Metrics/ClassLength:
+  Max: 200
+
+Metrics/BlockLength:
+  Exclude:
+    - "spec/**/*"
+
+# Performance cops
+Performance/RedundantMerge:
+  Enabled: true
+Performance/RedundantBlockCall:
+  Enabled: true
+
+# RSpec cops
+RSpec/ExampleLength:
+  Max: 10
+
+RSpec/MultipleExpectations:
+  Max: 3
+
+RSpec/NestedGroups:
+  Max: 3
+
+RSpec/DescribeClass:
+  Enabled: true
+
+RSpec/LetSetup:
+  Enabled: true
