@@ -2,6 +2,7 @@
 
 require 'yaml'
 require 'erb'
+require 'tempfile'
 
 module PromptValueEstimator
   class Configuration
@@ -56,7 +57,10 @@ module PromptValueEstimator
 
     def load_config
       config_content = File.read(@config_path)
-      processed_content = ERB.new(config_content).result
+      
+      # Process ERB template with environment variable substitution
+      processed_content = process_erb_template(config_content)
+      
       config = YAML.safe_load(processed_content)
 
       @providers = config['providers'] || {}
@@ -68,6 +72,14 @@ module PromptValueEstimator
       raise ConfigurationError, "Configuration file not found: #{@config_path}"
     rescue YAML::SyntaxError => e
       raise ConfigurationError, "Invalid YAML in configuration file: #{e.message}"
+    end
+
+    def process_erb_template(content)
+      # Replace environment variable placeholders with actual values
+      content.gsub(/\$\{([^}]+)\}/) do |match|
+        env_var = $1
+        ENV[env_var] || match # Keep original if env var not set
+      end
     end
   end
 
