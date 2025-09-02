@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative 'prompt_value_estimator/version'
+require_relative 'prompt_value_estimator/configuration'
 
 module PromptValueEstimator
   class Error < StandardError; end

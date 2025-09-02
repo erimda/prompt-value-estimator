@@ -1,0 +1,53 @@
+# frozen_string_literal: true
+
+providers:
+  serpstat:
+    api_key: ${SERPSTAT_API_KEY}
+    default_region: us
+    enabled: true
+  dataforseo:
+    enabled: false
+    login: ${DATAFORSEO_LOGIN}
+    password: ${DATAFORSEO_PASSWORD}
+
+normalize:
+  max_variants: 15
+  include_question_forms: true
+  stopwords:
+    - the
+    - a
+    - an
+    - and
+    - or
+    - but
+    - in
+    - on
+    - at
+    - to
+    - for
+    - of
+    - with
+    - by
+
+estimate:
+  weights:
+    head: 0.5
+    mid: 0.35
+    long: 0.15
+  locale_bias:
+    us: 1.0
+    tr: 0.9
+    de: 0.95
+  confidence:
+    base_score: 0.5
+    source_bonus: 0.1
+    variant_bonus: 0.1
+
+cache:
+  ttl_seconds: 86400
+  enabled: true
+
+output:
+  topN: 10
+  include_breakdown: true
+  include_assumptions: true
