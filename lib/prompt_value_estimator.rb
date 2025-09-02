@@ -5,6 +5,7 @@ require_relative 'prompt_value_estimator/configuration'
 require_relative 'prompt_value_estimator/errors'
 require_relative 'prompt_value_estimator/logger'
 require_relative 'prompt_value_estimator/base_service'
+require_relative 'prompt_value_estimator/normalizer'
 
 module PromptValueEstimator
   class Error < StandardError; end
