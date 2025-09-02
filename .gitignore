@@ -1,0 +1,42 @@
+# Dependencies
+/vendor/bundle
+/.bundle/
+/vendor/cache
+/vendor/gems
+/vendor/ruby
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+/logs
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+
+# Coverage reports
+/coverage/
+*.gcov
+
+# RSpec
+.rspec_status
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
