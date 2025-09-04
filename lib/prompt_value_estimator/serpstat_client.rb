@@ -26,11 +26,10 @@ module PromptValueEstimator
 
       ensure_rate_limit
 
-      response = make_request('bulk_keywords_overview', {
-                                q: keyword,
-                                se: 'g_us', # Search engine: Google US
-                                loc: region
-                              })
+      response = make_jsonrpc_request('SerpstatKeywordProcedure.getKeywordsInfo', {
+                                        keywords: [keyword],
+                                        se: 'g_us' # Search engine: Google US
+                                      })
 
       parse_keyword_response(response, keyword)
     rescue StandardError => e
@@ -89,6 +88,29 @@ module PromptValueEstimator
       @last_request_time = Time.now.to_f
     end
 
+    def make_jsonrpc_request(method, params)
+      request_data = build_jsonrpc_request(method, params)
+      log_debug('Making JSON-RPC request', { method: method, params: params })
+
+      response = retry_with_backoff do
+        # Add token as query parameter
+        uri = URI("#{@base_url}?token=#{@api_key}")
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = true
+        http.read_timeout = 30
+        http.open_timeout = 10
+
+        request = Net::HTTP::Post.new(uri)
+        request['Content-Type'] = 'application/json'
+        request['User-Agent'] = 'PromptValueEstimator/1.0'
+        request.body = request_data.to_json
+
+        http.request(request)
+      end
+
+      handle_http_response(response)
+    end
+
     def make_request(endpoint, params)
       uri = build_uri(endpoint, params)
       log_debug('Making request', { endpoint: endpoint, params: params, uri: uri.to_s })
@@ -106,6 +128,15 @@ module PromptValueEstimator
       end
 
       handle_http_response(response)
+    end
+
+    def build_jsonrpc_request(method, params)
+      {
+        jsonrpc: '2.0',
+        method: method,
+        params: params,
+        id: 1
+      }
     end
 
     def build_uri(endpoint, params)
@@ -138,18 +169,65 @@ module PromptValueEstimator
     def parse_keyword_response(response, keyword)
       return {} unless response.is_a?(Hash)
 
-      result = response['result'] || {}
-      keyword_data = result[keyword] || {}
+      # Handle JSON-RPC response format
+      if response['result'] && response['result']['data']
+        data = response['result']['data']
+        keyword_data = data.find { |item| item['keyword'] == keyword } || {}
 
-      {
-        keyword: keyword,
-        search_volume: keyword_data['sv'] || 0,
-        cpc: keyword_data['cpc'] || 0.0,
-        competition: keyword_data['comp'] || 0.0,
-        results_count: keyword_data['results'] || 0,
-        trend: keyword_data['trend'] || [],
-        source: 'serpstat'
-      }
+        {
+          keyword: keyword,
+          search_volume: keyword_data['region_queries_count'] || 0,
+          cpc: keyword_data['cost'] || 0.0,
+          competition: keyword_data['concurrency'] || 0.0,
+          results_count: keyword_data['found_results'] || 0,
+          trend: keyword_data['trend'] || [],
+          source: 'serpstat'
+        }
+      elsif response['result']
+        result = response['result']
+
+        # Check if result is an array (JSON-RPC format)
+        if result.is_a?(Array)
+          keyword_data = result.find { |item| item['keyword'] == keyword } || {}
+
+          {
+            keyword: keyword,
+            search_volume: keyword_data['region_queries_count'] || 0,
+            cpc: keyword_data['cpc'] || 0.0,
+            competition: keyword_data['competitive_difficulty'] || 0.0,
+            results_count: keyword_data['results_count'] || 0,
+            trend: keyword_data['trend'] || [],
+            source: 'serpstat'
+          }
+        else
+          # Handle old format where result is a hash with keyword as key
+          keyword_data = result[keyword] || {}
+
+          {
+            keyword: keyword,
+            search_volume: keyword_data['sv'] || 0,
+            cpc: keyword_data['cpc'] || 0.0,
+            competition: keyword_data['comp'] || 0.0,
+            results_count: keyword_data['results'] || 0,
+            trend: keyword_data['trend'] || [],
+            source: 'serpstat'
+          }
+        end
+      else
+        # Fallback for non-JSON-RPC format
+        result = response['result'] || {}
+        keyword_data = result[keyword] || {}
+
+        {
+          keyword: keyword,
+          search_volume: keyword_data['sv'] || 0,
+          cpc: keyword_data['cpc'] || 0.0,
+          competition: keyword_data['comp'] || 0.0,
+          results_count: keyword_data['results'] || 0,
+          trend: keyword_data['trend'] || [],
+          source: 'serpstat'
+        }
+      end
     end
 
     def parse_related_response(response, _keyword)

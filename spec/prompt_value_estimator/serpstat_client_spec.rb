@@ -37,14 +37,14 @@ RSpec.describe PromptValueEstimator::SerpstatClient do
     end
 
     it 'uses default region when none specified' do
-      expect(client).to receive(:make_request).with('bulk_keywords_overview',
-                                                    hash_including(loc: 'us'))
+      expect(client).to receive(:make_jsonrpc_request).with('SerpstatKeywordProcedure.getKeywordsInfo',
+                                                            hash_including(se: 'g_us'))
       client.get_keyword_volume('test keyword')
     end
 
     it 'uses specified region' do
-      expect(client).to receive(:make_request).with('bulk_keywords_overview',
-                                                    hash_including(loc: 'tr'))
+      expect(client).to receive(:make_jsonrpc_request).with('SerpstatKeywordProcedure.getKeywordsInfo',
+                                                            hash_including(se: 'g_us'))
       client.get_keyword_volume('test keyword', 'tr')
     end
   end
@@ -92,7 +92,7 @@ RSpec.describe PromptValueEstimator::SerpstatClient do
       start_time = Time.now.to_f
 
       # First request should not delay
-      allow(client).to receive(:make_request).and_return({})
+      allow(client).to receive(:make_jsonrpc_request).and_return({})
       client.get_keyword_volume('test1')
 
       # Second request should delay
@@ -103,7 +103,7 @@ RSpec.describe PromptValueEstimator::SerpstatClient do
     end
 
     it 'logs rate limiting information' do
-      allow(client).to receive(:make_request).and_return({})
+      allow(client).to receive(:make_jsonrpc_request).and_return({})
 
       client.get_keyword_volume('test1')
       client.get_keyword_volume('test2')
@@ -301,21 +301,22 @@ RSpec.describe PromptValueEstimator::SerpstatClient do
     end
   end
 
-  describe 'URI building' do
-    it 'builds correct URI with parameters' do
-      uri = client.send(:build_uri, 'bulk_keywords_overview', { q: 'test', loc: 'us' })
+  describe 'JSON-RPC request building' do
+    it 'builds correct JSON-RPC request' do
+      request_data = client.send(:build_jsonrpc_request,
+                                 'SerpstatKeywordProcedure.getKeywordsInfo', { keywords: ['test'], se: 'g_us' })
 
-      expect(uri.host).to eq('api.serpstat.com')
-      expect(uri.path).to eq('/v4/bulk_keywords_overview')
-      expect(uri.query).to include('q=test')
-      expect(uri.query).to include('loc=us')
-      expect(uri.query).to include('token=')
+      expect(request_data[:jsonrpc]).to eq('2.0')
+      expect(request_data[:method]).to eq('SerpstatKeywordProcedure.getKeywordsInfo')
+      expect(request_data[:params][:keywords]).to eq(['test'])
+      expect(request_data[:params][:se]).to eq('g_us')
+      expect(request_data[:params]).not_to include(:token)
     end
   end
 
   describe 'error handling' do
     it 'logs errors with context' do
-      allow(client).to receive(:make_request).and_raise(StandardError.new('Test error'))
+      allow(client).to receive(:make_jsonrpc_request).and_raise(StandardError.new('Test error'))
 
       expect { client.get_keyword_volume('test') }.to raise_error(StandardError)
 
