@@ -63,7 +63,8 @@ RSpec.describe PromptValueEstimator::SerpstatClient do
     end
 
     it 'calls related endpoint' do
-      expect(client).to receive(:make_request).with('related', hash_including(q: 'test keyword'))
+      expect(client).to receive(:make_jsonrpc_request).with('SerpstatKeywordProcedure.getRelatedKeywords',
+                                                            hash_including(keyword: 'test keyword'))
       client.get_related_keywords('test keyword')
     end
   end
@@ -82,7 +83,8 @@ RSpec.describe PromptValueEstimator::SerpstatClient do
     end
 
     it 'calls suggest endpoint' do
-      expect(client).to receive(:make_request).with('suggest', hash_including(q: 'test keyword'))
+      expect(client).to receive(:make_jsonrpc_request).with('SerpstatKeywordProcedure.getSuggestions',
+                                                            hash_including(keyword: 'test keyword'))
       client.get_keyword_suggestions('test keyword')
     end
   end

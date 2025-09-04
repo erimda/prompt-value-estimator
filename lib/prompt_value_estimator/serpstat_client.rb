@@ -45,11 +45,12 @@ module PromptValueEstimator
 
       ensure_rate_limit
 
-      response = make_request('related', {
-                                q: keyword,
-                                se: 'g_us',
-                                loc: region
-                              })
+      response = make_jsonrpc_request('SerpstatKeywordProcedure.getRelatedKeywords', {
+                                        keyword: keyword,
+                                        se: 'g_us', # Search engine: Google US
+                                        page: 1,
+                                        size: 10
+                                      })
 
       parse_related_response(response, keyword)
     rescue StandardError => e
@@ -65,11 +66,12 @@ module PromptValueEstimator
 
       ensure_rate_limit
 
-      response = make_request('suggest', {
-                                q: seed_keyword,
-                                se: 'g_us',
-                                loc: region
-                              })
+      response = make_jsonrpc_request('SerpstatKeywordProcedure.getSuggestions', {
+                                        keyword: seed_keyword,
+                                        se: 'g_us', # Search engine: Google US
+                                        page: 1,
+                                        size: 10
+                                      })
 
       parse_suggestions_response(response, seed_keyword)
     rescue StandardError => e
@@ -233,34 +235,66 @@ module PromptValueEstimator
     def parse_related_response(response, _keyword)
       return [] unless response.is_a?(Hash)
 
-      result = response['result'] || {}
-      related = result['related'] || []
+      # Handle JSON-RPC response format
+      if response['result'] && response['result']['data']
+        related = response['result']['data'] || []
 
-      related.map do |item|
-        {
-          keyword: item['keyword'] || '',
-          search_volume: item['sv'] || 0,
-          cpc: item['cpc'] || 0.0,
-          competition: item['comp'] || 0.0,
-          source: 'serpstat'
-        }
+        related.map do |item|
+          {
+            keyword: item['keyword'] || '',
+            search_volume: item['region_queries_count'] || 0,
+            cpc: item['cpc'] || 0.0,
+            competition: item['competitive_difficulty'] || 0.0,
+            source: 'serpstat'
+          }
+        end
+      else
+        # Fallback for old format
+        result = response['result'] || {}
+        related = result['related'] || []
+
+        related.map do |item|
+          {
+            keyword: item['keyword'] || '',
+            search_volume: item['sv'] || 0,
+            cpc: item['cpc'] || 0.0,
+            competition: item['comp'] || 0.0,
+            source: 'serpstat'
+          }
+        end
       end
     end
 
     def parse_suggestions_response(response, _seed_keyword)
       return [] unless response.is_a?(Hash)
 
-      result = response['result'] || {}
-      suggestions = result['suggestions'] || []
+      # Handle JSON-RPC response format
+      if response['result'] && response['result']['data']
+        suggestions = response['result']['data'] || []
 
-      suggestions.map do |item|
-        {
-          keyword: item['keyword'] || '',
-          search_volume: item['sv'] || 0,
-          cpc: item['cpc'] || 0.0,
-          competition: item['comp'] || 0.0,
-          source: 'serpstat'
-        }
+        suggestions.map do |item|
+          {
+            keyword: item['keyword'] || '',
+            search_volume: 0, # Suggestions don't include search volume
+            cpc: 0.0, # Suggestions don't include CPC
+            competition: 0.0, # Suggestions don't include competition
+            source: 'serpstat'
+          }
+        end
+      else
+        # Fallback for old format
+        result = response['result'] || {}
+        suggestions = result['suggestions'] || []
+
+        suggestions.map do |item|
+          {
+            keyword: item['keyword'] || '',
+            search_volume: item['sv'] || 0,
+            cpc: item['cpc'] || 0.0,
+            competition: item['comp'] || 0.0,
+            source: 'serpstat'
+          }
+        end
       end
     end
   end
