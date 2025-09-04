@@ -26,7 +26,7 @@ module PromptValueEstimator
 
       ensure_rate_limit
 
-      response = make_request('keyword_info', {
+      response = make_request('bulk_keywords_overview', {
                                 q: keyword,
                                 se: 'g_us', # Search engine: Google US
                                 loc: region

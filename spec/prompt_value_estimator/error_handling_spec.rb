@@ -11,11 +11,12 @@ RSpec.describe 'Error Handling' do
 
     it 'provides helpful error messages for invalid YAML' do
       temp_config = Tempfile.new(['config', '.yml'])
-      temp_config.write("invalid: yaml: content: [")
+      temp_config.write('invalid: yaml: content: [')
       temp_config.close
 
       expect { PromptValueEstimator::Configuration.new(temp_config.path) }
-        .to raise_error(PromptValueEstimator::ConfigurationError, /Invalid YAML in configuration file/)
+        .to raise_error(PromptValueEstimator::ConfigurationError,
+                        /Invalid YAML in configuration file/)
 
       temp_config.unlink
     end

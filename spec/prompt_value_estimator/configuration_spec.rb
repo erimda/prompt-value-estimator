@@ -28,9 +28,9 @@ RSpec.describe PromptValueEstimator::Configuration do
 
   describe 'environment variable interpolation' do
     before do
-      @original_serpstat_key = ENV['SERPSTAT_API_KEY']
-      @original_dataforseo_login = ENV['DATAFORSEO_LOGIN']
-      @original_dataforseo_password = ENV['DATAFORSEO_PASSWORD']
+      @original_serpstat_key = ENV.fetch('SERPSTAT_API_KEY', nil)
+      @original_dataforseo_login = ENV.fetch('DATAFORSEO_LOGIN', nil)
+      @original_dataforseo_password = ENV.fetch('DATAFORSEO_PASSWORD', nil)
     end
 
     after do
@@ -42,21 +42,21 @@ RSpec.describe PromptValueEstimator::Configuration do
     it 'interpolates SERPSTAT_API_KEY environment variable' do
       ENV['SERPSTAT_API_KEY'] = 'test_api_key_123'
       config = described_class.new(config_path)
-      
+
       expect(config.providers['serpstat']['api_key']).to eq('test_api_key_123')
     end
 
     it 'interpolates DATAFORSEO_LOGIN environment variable' do
       ENV['DATAFORSEO_LOGIN'] = 'test_login'
       config = described_class.new(config_path)
-      
+
       expect(config.providers['dataforseo']['login']).to eq('test_login')
     end
 
     it 'interpolates DATAFORSEO_PASSWORD environment variable' do
       ENV['DATAFORSEO_PASSWORD'] = 'test_password'
       config = described_class.new(config_path)
-      
+
       expect(config.providers['dataforseo']['password']).to eq('test_password')
     end
 
@@ -64,9 +64,9 @@ RSpec.describe PromptValueEstimator::Configuration do
       ENV.delete('SERPSTAT_API_KEY')
       ENV.delete('DATAFORSEO_LOGIN')
       ENV.delete('DATAFORSEO_PASSWORD')
-      
+
       config = described_class.new(config_path)
-      
+
       expect(config.providers['serpstat']['api_key']).to eq('${SERPSTAT_API_KEY}')
       expect(config.providers['dataforseo']['login']).to eq('${DATAFORSEO_LOGIN}')
       expect(config.providers['dataforseo']['password']).to eq('${DATAFORSEO_PASSWORD}')
@@ -273,7 +273,8 @@ RSpec.describe PromptValueEstimator::Configuration do
     end
 
     it 'has required normalization settings' do
-      expect(configuration.normalize).to include('max_variants', 'include_question_forms', 'stopwords')
+      expect(configuration.normalize).to include('max_variants', 'include_question_forms',
+                                                 'stopwords')
     end
 
     it 'has required estimation settings' do
@@ -293,11 +294,12 @@ RSpec.describe PromptValueEstimator::Configuration do
     it 'raises ConfigurationError for invalid YAML' do
       # Create a temporary invalid YAML file
       temp_config = Tempfile.new(['config', '.yml'])
-      temp_config.write("invalid: yaml: content: [")
+      temp_config.write('invalid: yaml: content: [')
       temp_config.close
 
       expect { described_class.new(temp_config.path) }
-        .to raise_error(PromptValueEstimator::ConfigurationError, /Invalid YAML in configuration file/)
+        .to raise_error(PromptValueEstimator::ConfigurationError,
+                        /Invalid YAML in configuration file/)
 
       temp_config.unlink
     end

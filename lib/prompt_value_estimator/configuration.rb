@@ -57,10 +57,10 @@ module PromptValueEstimator
 
     def load_config
       config_content = File.read(@config_path)
-      
+
       # Process ERB template with environment variable substitution
       processed_content = process_erb_template(config_content)
-      
+
       config = YAML.safe_load(processed_content)
 
       @providers = config['providers'] || {}
@@ -77,7 +77,7 @@ module PromptValueEstimator
     def process_erb_template(content)
       # Replace environment variable placeholders with actual values
       content.gsub(/\$\{([^}]+)\}/) do |match|
-        env_var = $1
+        env_var = ::Regexp.last_match(1)
         ENV[env_var] || match # Keep original if env var not set
       end
     end

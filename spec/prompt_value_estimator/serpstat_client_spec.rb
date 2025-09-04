@@ -37,12 +37,14 @@ RSpec.describe PromptValueEstimator::SerpstatClient do
     end
 
     it 'uses default region when none specified' do
-      expect(client).to receive(:make_request).with('keyword_info', hash_including(loc: 'us'))
+      expect(client).to receive(:make_request).with('bulk_keywords_overview',
+                                                    hash_including(loc: 'us'))
       client.get_keyword_volume('test keyword')
     end
 
     it 'uses specified region' do
-      expect(client).to receive(:make_request).with('keyword_info', hash_including(loc: 'tr'))
+      expect(client).to receive(:make_request).with('bulk_keywords_overview',
+                                                    hash_including(loc: 'tr'))
       client.get_keyword_volume('test keyword', 'tr')
     end
   end
@@ -301,10 +303,10 @@ RSpec.describe PromptValueEstimator::SerpstatClient do
 
   describe 'URI building' do
     it 'builds correct URI with parameters' do
-      uri = client.send(:build_uri, 'keyword_info', { q: 'test', loc: 'us' })
+      uri = client.send(:build_uri, 'bulk_keywords_overview', { q: 'test', loc: 'us' })
 
       expect(uri.host).to eq('api.serpstat.com')
-      expect(uri.path).to eq('/v4/keyword_info')
+      expect(uri.path).to eq('/v4/bulk_keywords_overview')
       expect(uri.query).to include('q=test')
       expect(uri.query).to include('loc=us')
       expect(uri.query).to include('token=')
